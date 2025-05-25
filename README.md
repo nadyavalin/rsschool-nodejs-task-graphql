@@ -25,9 +25,6 @@ Create the database file and apply migrations:
 ```bash
 npx prisma migrate deploy
 ```
-```bash
-npx prisma db seed
-```
 
 ### 5. Start the Server
 Run the server to test the GraphQL endpoint locally:
