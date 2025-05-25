@@ -337,24 +337,25 @@ const RootQueryType = new GraphQLObjectType({
           !!parsedInfo?.fieldsByTypeName?.User?.subscribedToUser;
         const includeProfile = !!parsedInfo?.fieldsByTypeName?.User?.profile;
         const includePosts = !!parsedInfo?.fieldsByTypeName?.User?.posts;
-
+        const includeMemberType =
+          includeProfile && !!parsedInfo?.fieldsByTypeName?.Profile?.memberType;
         let posts: Post[] = [];
         if (includePosts) {
-          loaders.post.clearAll();
-          posts = await prisma.post.findMany();
+          posts = await prisma.post.findMany({ where: {} });
           posts.forEach((post) => loaders.post.prime(post.id, post));
         }
 
         let memberTypes: MemberType[] = [];
-        if (includeProfile && parsedInfo?.fieldsByTypeName?.Profile?.memberType) {
-          loaders.memberType.clearAll();
-          memberTypes = await prisma.memberType.findMany();
+        if (includeMemberType) {
+          memberTypes = await prisma.memberType.findMany({ where: {} });
           memberTypes.forEach((mt) => loaders.memberType.prime(mt.id, mt));
         }
 
         const users = await prisma.user.findMany({
           include: {
-            profile: includeProfile ? { include: { memberType: true } } : undefined,
+            profile: includeProfile
+              ? { include: { memberType: includeMemberType } }
+              : undefined,
             posts: includePosts,
             userSubscribedTo: includeUserSubscribedTo
               ? { include: { author: true } }
@@ -386,16 +387,18 @@ const RootQueryType = new GraphQLObjectType({
           loaders.user.prime(user.id, userWithRelations);
           if (includeProfile && user.profile && 'memberType' in user.profile) {
             loaders.profile.prime(user.profile.id, user.profile as ProfileWithMemberType);
-            if ((user.profile as ProfileWithMemberType).memberType) {
+            if (includeMemberType && (user.profile as ProfileWithMemberType).memberType) {
               loaders.memberType.prime(
                 user.profile.memberTypeId,
                 (user.profile as ProfileWithMemberType).memberType,
               );
             }
           }
+          if (includePosts && user.posts) {
+            user.posts.forEach((post) => loaders.post.prime(post.id, post));
+          }
           return userWithRelations;
         });
-
         if (includeUserSubscribedTo) {
           usersWithRelations.forEach((user) => {
             loaders.subscriptionsBySubscriber.prime(user.id, user.userSubscribedTo);
