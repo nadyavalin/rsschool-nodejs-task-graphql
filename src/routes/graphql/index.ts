@@ -326,7 +326,7 @@ const RootQueryType = new GraphQLObjectType({
       type: new GraphQLNonNull(new GraphQLList(new GraphQLNonNull(UserType))),
       resolve: async (
         _: unknown,
-        __: unknown,
+        __: true,
         { prisma, loaders }: GraphQLContext,
         info,
       ) => {
@@ -339,15 +339,13 @@ const RootQueryType = new GraphQLObjectType({
         const includePosts = !!parsedInfo?.fieldsByTypeName?.User?.posts;
         const includeMemberType =
           includeProfile && !!parsedInfo?.fieldsByTypeName?.Profile?.memberType;
-        let posts: Post[] = [];
         if (includePosts) {
-          posts = await prisma.post.findMany({ where: {} });
+          const posts = await prisma.post.findMany({ where: {} });
           posts.forEach((post) => loaders.post.prime(post.id, post));
         }
 
-        let memberTypes: MemberType[] = [];
         if (includeMemberType) {
-          memberTypes = await prisma.memberType.findMany({ where: {} });
+          const memberTypes = await prisma.memberType.findMany({ where: {} });
           memberTypes.forEach((mt) => loaders.memberType.prime(mt.id, mt));
         }
 
@@ -357,12 +355,8 @@ const RootQueryType = new GraphQLObjectType({
               ? { include: { memberType: includeMemberType } }
               : undefined,
             posts: includePosts,
-            userSubscribedTo: includeUserSubscribedTo
-              ? { include: { author: true } }
-              : undefined,
-            subscribedToUser: includeSubscribedToUser
-              ? { include: { subscriber: true } }
-              : undefined,
+            userSubscribedTo: includeUserSubscribedTo ? true : undefined,
+            subscribedToUser: includeSubscribedToUser ? true : undefined,
           },
         });
 
@@ -433,7 +427,6 @@ const RootQueryType = new GraphQLObjectType({
             });
           });
         }
-
         return usersWithRelations;
       },
     },
